@@ -1,5 +1,5 @@
 import hashlib
-from typing import Optional
+from typing import Optional, Tuple
 
 import motor.motor_asyncio
 import uuid
@@ -48,7 +48,7 @@ async def add_task(userId: str, task_data: dict) -> Optional[dict]:
 
 
 # Retrieve all tasks from DB
-async def retrieve_tasks():
+async def retrieveTasks():
     tasks = []
     async for task in task_collection.find():
         tasks.append(task_helper(task))
@@ -56,14 +56,14 @@ async def retrieve_tasks():
 
 
 # Retrieve a student with a matching ID
-async def retrieve_task(uuid: str) -> dict:
+async def retrieveTask(uuid: str) -> dict:
     task = await task_collection.find_one({"task_id": uuid})
     if task:
         return task_helper(task)
 
 
 # Retrieve a student with a matching ID
-async def detailed_task(uuid: str) -> dict:
+async def detailedTask(uuid: str) -> dict:
     task = await task_collection.find_one({"task_id": uuid})
     if task:
         return task
@@ -85,13 +85,17 @@ async def updateTask(taskId: str, data: dict) -> bool:
 
 
 # Create a new User
-async def createNewUser(password: str, user_data: dict) -> dict:
-    user_data['userId'] = str(uuid.uuid4())
-    user_data['hashed_password'] = str(hashlib.sha512(password.encode('utf-8') + salt.encode('utf-8')).hexdigest())
-    user = await user_collection.insert_one(user_data)
-    new_user = await user_collection.find_one({"userId": user_data['userId']})
-    if new_user:
-        return user_helper(new_user)
+async def createNewUser(password: str, user_data: dict) -> Optional[dict]:
+    userCheck = await user_collection.find_one({"email": user_data['email']})
+    if userCheck is None:
+        user_data['userId'] = str(uuid.uuid4())
+        user_data['hashed_password'] = str(hashlib.sha512(password.encode('utf-8') + salt.encode('utf-8')).hexdigest())
+        user = await user_collection.insert_one(user_data)
+        new_user = await user_collection.find_one({"userId": user_data['userId']})
+        if new_user:
+            return user_helper(new_user)
+    else:
+        return None
 
 
 async def getUserDetails(userId: str) -> Optional[dict]:
@@ -102,19 +106,31 @@ async def getUserDetails(userId: str) -> Optional[dict]:
         return None
 
 
-async def shareATask(task: dict, emailToShare: EmailStr, taskId: str) -> bool:
-    lstShare = task['sharedWith']
-    if lstShare[0] is None:
-        lstShare.insert(0, emailToShare)
-        task['sharedWith'] = lstShare
-        result = await updateTask(taskId, task)
-        if result:
-            return True
-    if emailToShare in lstShare:
-        return False
+async def shareATask(task: dict, emailToShare: EmailStr, taskId: str) -> Tuple[bool, str]:
+    user = await user_collection.find_one({"email": emailToShare})
+    if user is not None:
+        lstShare = task['sharedWith']
+        if lstShare[0] is None:
+            lstShare.insert(0, emailToShare)
+            task['sharedWith'] = lstShare
+            result = await updateTask(taskId, task)
+            if result:
+                return True, "Shared"
+        if emailToShare in lstShare:
+            return False, "Exists"
+        else:
+            lstShare.append(emailToShare)
+            task['sharedWith'] = lstShare
+            result = await updateTask(taskId, task)
+            if result:
+                return True, "Shared"
     else:
-        lstShare.append(emailToShare)
-        task['sharedWith'] = lstShare
-        result = await updateTask(taskId, task)
-        if result:
-            return True
+        return False, "User Not Found"
+
+
+async def viewSharedTask(task: dict, emailSharedTo: EmailStr, taskId: str) -> Optional[dict]:
+    lstShared = task['sharedWith']
+    if emailSharedTo in lstShared:
+        return task_helper(task)
+    else:
+        return None

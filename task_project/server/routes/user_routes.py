@@ -20,6 +20,8 @@ async def add_new_user(password: str, user: UserSchema = Body(...)):
     new_user = await createNewUser(password, user)
     if new_user:
         return ResponseModel(new_user, "User created successfully")
+    else:
+        return ErrorResponseModel("Precondition failed", 412, "User with that email exists")
 
 
 @router.get("/getUserDetails", response_description="Get details of a User")
