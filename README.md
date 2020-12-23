@@ -11,6 +11,10 @@ Repository holds a Backend coded in Python using FASTAPI (framework) and Motor (
     cd task_project
     python main.py
     
+ # MongoDB Setup
+    Create a database with name: task_project
+    Under that database create two Collections: tasks_collection and users_collection 
+    
   - Navigate to http://127.0.0.1:8000/docs#/.  
   This is SwaggerUI for interaction and testing the REST APIs.
   
