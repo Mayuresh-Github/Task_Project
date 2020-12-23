@@ -10,7 +10,8 @@ from task_project.server.database import (
     updateTask,
     shareATask,
     detailedTask,
-    viewSharedTask
+    viewSharedTask,
+    deleteTask
 )
 from task_project.server.models.task_model import (
     ErrorResponseModel,
@@ -85,3 +86,12 @@ async def view_task(taskId: str, emailSharedTo: EmailStr) -> dict:
         return ResponseModel(taskToShare, "Read successful")
     else:
         return ErrorResponseModel("Unauthorised", 404, "You are not authenticated to view this page")
+
+
+@router.delete("/deleteTask", response_description="Delete a Task")
+async def delete_task(taskId: str, userId: str) -> dict:
+    result = await deleteTask(taskId, userId)
+    if result:
+        return ResponseModel(200, "Delete successful")
+    else:
+        return ErrorResponseModel("Error", 400, "Bad request")

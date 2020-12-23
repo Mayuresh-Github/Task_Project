@@ -84,6 +84,23 @@ async def updateTask(taskId: str, data: dict) -> bool:
         return False
 
 
+# Delete a Task
+async def deleteTask(taskId: str, userId: str) -> bool:
+    task = await task_collection.find_one({"task_id": taskId})
+    if task is not None:
+        user = await user_collection.find_one({"userId": userId})
+        if user is not None:
+            if user['userId'] == task['userId']:
+                task_collection.delete_many({"task_id": taskId})
+                return True
+            else:
+                return False
+        else:
+            return False
+    else:
+        return False
+
+
 # Create a new User
 async def createNewUser(password: str, user_data: dict) -> Optional[dict]:
     userCheck = await user_collection.find_one({"email": user_data['email']})
@@ -98,6 +115,7 @@ async def createNewUser(password: str, user_data: dict) -> Optional[dict]:
         return None
 
 
+# Get User Details
 async def getUserDetails(userId: str) -> Optional[dict]:
     user = await user_collection.find_one({"userId": userId})
     if user:
@@ -106,6 +124,7 @@ async def getUserDetails(userId: str) -> Optional[dict]:
         return None
 
 
+# Share a Task
 async def shareATask(task: dict, emailToShare: EmailStr, taskId: str) -> Tuple[bool, str]:
     user = await user_collection.find_one({"email": emailToShare})
     if user is not None:
@@ -128,6 +147,7 @@ async def shareATask(task: dict, emailToShare: EmailStr, taskId: str) -> Tuple[b
         return False, "User Not Found"
 
 
+# View the shared Task
 async def viewSharedTask(task: dict, emailSharedTo: EmailStr, taskId: str) -> Optional[dict]:
     lstShared = task['sharedWith']
     if emailSharedTo in lstShared:
